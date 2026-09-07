@@ -4,9 +4,17 @@ A single-file, self-hosted checklist for converting a Prusa CORE One into a
 CORE One+ (Gen 2) INDX.
 
 `build.mjs` merges the official Prusa **INDX conversion guide** and the
-**CORE One+ (Gen 2) upgrade guide** into one re-ordered, de-duplicated sequence
-of 16 phases, following the switching order from Prusa's combined article, and
-folds in community notes from the guide/article comments and r/prusa3d.
+**CORE One+ (Gen 2) upgrade guide** into one linear, de-duplicated sequence of
+351 steps across 19 phases, following the switching order from Prusa's combined
+article, and folds in community notes from the guide/article comments and
+r/prusa3d.
+
+**Live version:** <https://lz-er.github.io/coreone-gen2-indx-guide/>
+
+Features: per-step checkboxes persisted in `localStorage`, global and per-phase
+progress, a salvaged-parts inventory of everything the kits do *not* contain,
+"keep this part" callouts on every teardown step, and a prep mode that filters
+down to the steps needing no kit parts.
 
 ## Build
 
@@ -63,6 +71,26 @@ mitigation for every `.html` in every repo on the instance):**
 
 `raw/branch/main/index.html` then renders as a normal page, `localStorage`
 included.
+
+## GitHub Pages
+
+`.github/workflows/pages.yml` publishes `index.html` (only) to GitHub Pages on
+every push to `main`. The workflow calls `actions/configure-pages` with
+`enablement: true`, so it turns Pages on by itself the first time it runs. If
+that is blocked by org policy, set **Settings → Pages → Source** to
+*GitHub Actions* once and re-run the workflow.
+
+The scraped `raw/` sources are deliberately left out of the published site.
+
+## Attribution
+
+All step text and photographs are the work of Prusa Research a.s., taken from
+the publicly published assembly guides on help.prusa3d.com. Every step in this
+page links back to its original, and photos are loaded directly from
+help.prusa3d.com rather than re-hosted. Community notes are quoted from the
+public comment threads on those guides and from r/prusa3d, attributed to their
+authors. This is an unofficial aid, not a replacement for the official guides,
+and is not affiliated with or endorsed by Prusa Research.
 
 ## Disclaimer
 

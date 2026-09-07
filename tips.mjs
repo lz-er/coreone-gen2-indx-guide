@@ -9,8 +9,8 @@ export const TIPS = {
     ['Matt-G (step comment)', 'The INDX-kit version of the offset-sensor-holder has the alignment wall on the <b>screw side</b> instead of the opposite side. Don\u2019t panic if your part looks different from the photo.'],
   ],
   1099523: [
-    ['Prusa (in-step note)', 'Because you are doing the GEN 2 upgrade too, this screw is only turned in <b>a few turns</b> now. It is fully tightened much later (Phase 14 in this guide).'],
-    ['bioxz / Pri Pri (step comment)', 'The sensor must already be in position and loosely held here \u2013 it is <i>not</i> skipped completely. Otherwise the front-right expansion joint alignment later becomes impossible to reason about.'],
+    ['Prusa (in-step note)', 'Because you are doing the GEN 2 upgrade too, this screw is only turned in <b>a few turns</b> now. It is fully tightened much later (Phase 16 in this guide).'],
+    ['bioxz / Pri Pri (step comment)', 'The sensor must already be in position and loosely held here \u2014 it is <i>not</i> skipped completely. Otherwise the front-right expansion joint alignment at {{1111025}} becomes impossible to reason about.'],
   ],
   1099623: [
     ['Crocmagnon (step comment)', 'The offset sensor cable does not like staying in its groove. Tack it down with the zip tie before you let go of it.'],
@@ -19,14 +19,14 @@ export const TIPS = {
     ['krisztian96 / z073 / Spin360 (step comments)', 'Screw-name mismatch: the bag is labelled <b>M3x14bT</b> while the guide says <b>M3x14cT</b>. Same story with M3x4bT / M3x12bT. <b>Go by the length</b>, not the suffix.'],
   ],
   1099715: [
-    ['Gen 2 conflict \u2013 read this', 'The INDX parts list asks for the old <b>6x3.1x8 mm heatbed spacer</b>. With the Gen 2 upgrade you instead use the <b>new 10 mm heatbed spacer</b> that you placed on the centre threaded hole in GEN 2 step 4.8 (Phase 3). Keep the old 6 mm spacer in the spares box.'],
+    ['Gen 2 conflict \u2013 read this', 'The INDX parts list asks for the old <b>6x3.1x8 mm heatbed spacer</b>. With the Gen 2 upgrade you instead use the <b>new 10 mm heatbed spacer</b> that you placed on the centre threaded hole at {{1110975}}. Keep the old 6 mm spacer in the spares box.'],
   ],
   1099880: [
     ['Prusa (in-step note)', 'With the GEN 2 upgrade you use the longer <b>M3x14</b> centre screw, not the M3x12 you removed.'],
     ['Gen 2 conflict', 'The centre spacer is the <b>new 10 mm Gen 2 spacer</b>, not the 6x3.1x8 mm one. Make sure it stays put as the heatbed goes down.'],
   ],
   1099926: [
-    ['Prusa \u2013 MilFej (step comment)', '<b>Do not fully tighten the heatbed screws here.</b> They are torqued in the correct sequence later, in GEN 2 step \u201cFixing the heatbed\u201d, after the expansion joints are aligned.'],
+    ['Prusa \u2013 MilFej (step comment)', '<b>Do not fully tighten the heatbed screws here.</b> They are torqued in the correct sequence at {{1111043}}, after the expansion joints are aligned.'],
     ['Pyron (step comment)', 'Use the expansion-joint aligner tool if you are doing the Gen 2 upgrade \u2013 and be aware you may have to loosen/remove the offset sensor again to align the front-right joint.'],
   ],
   1100056: [
@@ -89,7 +89,7 @@ export const TIPS = {
     ['Prusa INDX article', '<b>Skip this step.</b> The Bowden-guide is not used on the INDX conversion \u2013 take it off the printer once it is detached.'],
   ],
   1113364: [
-    ['Atrica3D (step comment)', 'If your CORE One is from the first wave, this is the moment to lubricate the tensioner screws to prevent galling. (You already did this in Phase 7 of this guide.)'],
+    ['Atrica3D (step comment)', 'If your CORE One is from the first wave, this is the moment to lubricate the tensioner screws to prevent galling. (You already did this in Phase 9 of this guide.)'],
   ],
   1113481: [
     ['sgomes / dingo dan / TheWortLord (step comments)', 'Multiple people read this as the <b>lower</b> idler, not the upper one. Cross-check your routing against the \u201cBelt routing overview\u201d step before you commit.'],
@@ -138,7 +138,7 @@ export const TIPS = {
     ['bioxz (step comment)', 'If you have the 8-tool version, fit the <b>top-right puck holders before tilting</b>. If you break the helper tool during the bottom holders you will need it again for the top-right ones \u2013 and the bottom ones can also be done with the wrench.'],
   ],
   1104485: [
-    ['mtbrider (article/step comment)', 'This is exactly the point where people lose track of the multi-guide dance. In this guide you simply continue with the next phase \u2013 no jumping.'],
+    ['mtbrider (article/step comment)', 'This is exactly the point where people lose track of the multi-guide dance. In this guide you simply continue with the next phase \u2014 the Gen 2 heatbed alignment ({{1110993}}).'],
   ],
 
   // ---- INDX chapter 6 (Preflight) ----

@@ -1,10 +1,12 @@
 import fs from 'node:fs';
 import { extractSteps } from './extract.mjs';
-import { TIPS, ARTICLE_COMMENTS, EXTRA } from './tips.mjs';
+import { TIPS, ARTICLE_COMMENTS } from './tips.mjs';
 import { KEEP, SALVAGE, SALVAGE_INTRO } from './salvage.mjs';
 import { PREP, PREP_TASKS, PREP_BLOCKED } from './prep.mjs';
 
 const SOURCES = {
+  indx1: { file: 'raw/indx_1-introduction_1096223.html', slug: '1-introduction_1096223', label: 'INDX 1', guide: 'INDX conversion guide \u2013 1. Introduction' },
+  indx2: { file: 'raw/indx_2-heatbed-electronics-disassembly_1096231.html', slug: '2-printer-preparation-disassembly_1096231', label: 'INDX 2', guide: 'INDX conversion guide \u2013 2. Printer preparation & disassembly' },
   indx3: { file: 'raw/indx_3-z-axis-upgrade_1096239.html', slug: '3-z-axis-upgrade_1096239', label: 'INDX 3', guide: 'INDX conversion guide \u2013 3. Z-axis upgrade' },
   indx4: { file: 'raw/indx_4-indx-toolhead-side-filament-sensors_1096247.html', slug: '4-indx-toolhead-side-filament-sensors_1096247', label: 'INDX 4', guide: 'INDX conversion guide \u2013 4. INDX Toolhead & Side filament sensors' },
   indx5: { file: 'raw/indx_5-spoolholders-tool-dock-assembly_1096255.html', slug: '5-spoolholders-tool-dock-assembly_1096255', label: 'INDX 5', guide: 'INDX conversion guide \u2013 5. Spoolholders & Tool dock assembly' },
@@ -14,15 +16,30 @@ const SOURCES = {
 };
 
 const STEPS = {};
+const REF = new Map();
 for (const [key, src] of Object.entries(SOURCES)) {
   const list = extractSteps(src.file);
   STEPS[key] = { src, list, byId: new Map(list.map((s) => [s.id, s])) };
+  // Prusa numbers steps by position within the chapter, not by the `order` field.
+  list.forEach((s, i) => REF.set(s.id, {
+    label: `${src.label}.${i + 1}`,
+    url: `https://help.prusa3d.com/guide/${src.slug}#${s.id}`,
+    title: s.title,
+  }));
+}
+
+/** Replace {{stepId}} placeholders in prose with a live label + link. */
+function refs(html) {
+  return String(html).replace(/\{\{(\d+)\}\}/g, (m, id) => {
+    const r = REF.get(Number(id));
+    if (!r) return m;
+    return `<a class="sref" href="${r.url}" target="_blank" rel="noopener" title="${esc(r.title)}">${r.label}</a>`;
+  });
 }
 
 const IMG = 'https://help.prusa3d.com/wp-content/uploads/2026/08/';
 const IMG9 = 'https://help.prusa3d.com/wp-content/uploads/2026/09/';
 const ART = 'https://help.prusa3d.com/article/assemblling-the-prusa-indx-core-one-with-the-gen-2-upgrade_1147602';
-const PSA_BEARINGS = 'https://www.reddit.com/r/prusa3d/comments/1w86sdb/psa_lube_the_bearings_in_your_indx_toolhead/';
 
 /** Pick steps from a chapter between two ids (inclusive), in guide order. */
 function range(key, fromId, toId, opts = {}) {
@@ -40,87 +57,154 @@ const c = (o) => ({ custom: true, ...o });
 
 const PLAN = [
   {
-    title: 'Phase 0 \u2013 Where you are & what changes',
-    intro: `This guide is a <b>re-ordered, de-duplicated merge</b> of the official Prusa CORE One INDX conversion guide and the
-      CORE One+ (Gen 2) upgrade guide, following the switching order defined in
-      <a href="${ART}" target="_blank" rel="noopener">Prusa\u2019s combined article</a> \u2013 but rewritten to start from
-      <b>your</b> current state and with the panel removals you already did folded in.`,
+    title: 'Phase 0 \u2013 Read this first',
+    intro: `A single linear merge of the <b>Prusa CORE One INDX conversion</b> guide and the <b>CORE One+ (Gen 2)</b> upgrade guide,
+      following the switching order defined in <a href="${ART}" target="_blank" rel="noopener">Prusa\u2019s combined article</a>,
+      with the duplicated and superseded steps removed.`,
     items: [
       c({
-        id: 'state',
-        title: 'Confirm your starting state',
+        id: 'overview',
+        title: 'What this guide covers, and in what order',
         lines: [
-          ['violet', 0, 'Tick every item below that is true. Everything in this guide assumes all of them are.'],
-          ['green', 1, 'INDX chapter 2 (printer preparation & disassembly) is <b>fully done</b> \u2013 top panel, door, Nextruder, LoveBoard, print fan, fan shroud, side handle, side filament sensor and spoolholder are off.'],
-          ['green', 1, 'INDX 3.1\u20133.5 done \u2013 heatbed cable cover removed, heatbed released and <b>removed from the printer</b>, and the loose Z-carriage spacer is safely stored.'],
-          ['green', 1, '<b>Both</b> steel side panels and <b>both</b> top see-through side covers are already off the printer (you did this early \u2013 good call, see the community note below).'],
-          ['green', 1, 'INDX 3.21 done \u2013 the old <b>Bed-cable-cover-bottom</b> is removed.'],
-          ['orange', 1, 'The <b>old expansion joints are still on the Z-carriage</b> \u2013 untouched. They come off in Phase 3.'],
-          ['orange', 1, '<b>Nothing belt-related has been touched.</b> Belts, tensioners, pulleys and both motors are still stock and installed.'],
-          [null, 0, 'note', 'If any of the above is <i>not</i> true, fix that first \u2013 the ordering below depends on it.'],
+          ['violet', 0, 'End state: a <b>Prusa CORE One+ (Gen 2) with INDX</b> \u2013 new 1.5GT belts and T21 pulleys, new heatbed expansion joints, and the INDX multi-tool head with 8 (or 4) nozzle tools.'],
+          ['blue', 0, 'You are following <b>three</b> documents at once. This page merges them so you never have to jump:'],
+          ['blue', 1, '<b>INDX conversion guide</b> \u2013 the master document. Orange badges.'],
+          ['blue', 1, '<b>CORE One+ (Gen 2) upgrade guide</b> \u2013 belts chapter 3 and heatbed chapter 4 only. Blue badges.'],
+          ['blue', 1, '<b>The combined article</b> \u2013 the glue steps that exist in neither guide. Purple badges.'],
+          ['green', 0, 'The Gen 2 guide\u2019s own chapters 1, 2 and 5 are <b>not used</b> \u2013 the INDX guide\u2019s equivalents replace them.'],
+          [null, 0, 'note', 'If you have the INDX conversion kit for CORE One+, <b>the Gen 2 parts are already inside the INDX UPGRADE box</b> \u2013 you do not need a separate Gen 2 kit.'],
+          [null, 0, 'caution', 'This assumes your printer is already a <b>CORE One+</b>. The Gen 2 upgrade is documented as \u201cCORE One+ \u2192 CORE One+ (Gen 2)\u201d. If you are on a plain CORE One, install the CORE One \u2192 CORE One+ kit first; plenty of people report the Gen 2 + INDX path working fine on converted original CORE Ones, but expect the odd part to look different (shorter motor shafts, unlubricated tensioner screws).'],
+          [null, 0, 'reminder', 'Every step here links back to the original Prusa step. If anything looks wrong, trust the original and tell me.'],
+        ],
+      }),
+      ...range('indx1', 1096271, 1096924),
+      c({
+        id: 'panels-early',
+        title: 'Optional but recommended: plan to remove both side panels early',
+        note: 'Community shortcut \u00b7 article comment',
+        lines: [
+          ['violet', 0, 'The official order removes the <b>left</b> panel + cover in Phase 4 and the <b>right</b> panel + cover in Phase 9.'],
+          ['green', 0, 'Many builders take <b>all four off right after the electronics are disconnected</b> (end of Phase 1) instead.'],
+          ['green', 1, 'The printer gets noticeably lighter and easier to turn.'],
+          ['green', 1, 'You can actually see into the frame for the bed spacers and the offset sensor.'],
+          ['green', 1, 'Nothing later depends on them being fitted until they go back on in Phases 12, 16 and 17.'],
+          [null, 0, 'note', 'If you do this, Phases 4 and 9 become a quick verification instead of work. Tick this step to remind yourself of the choice \u2013 the actual removal instructions are in those phases.'],
         ],
         tips: [['Tkadla (article comment)', ARTICLE_COMMENTS[0][1]]],
-      }),
-      c({
-        id: 'xy-cables',
-        title: 'Disconnect the X and Y motor cables',
-        note: 'Article section: \u201cSecuring the bed spacer \u2013 right, additional information\u201d',
-        lines: [
-          ['violet', 0, 'Press the safety latch and <b>disconnect the X and Y motor cables</b> from the xBuddy board at the back of the printer.'],
-          ['green', 1, 'Gently pull the cables to create some slack, but <b>keep the connectors inside the electronics compartment</b>.'],
-          [null, 0, 'caution', 'The official article does this <i>before</i> removing the left panel. Since your panels are already off, do it now \u2013 the motors have to be free before the Gen 2 belt work, and the cables get reconnected in Phase 14.'],
-        ],
-        images: [[IMG + 'b4f150ea3fa5291bc09807d8eb8bd6a5-800x600.jpeg', IMG + 'b4f150ea3fa5291bc09807d8eb8bd6a5.jpeg']],
-      }),
-      c({
-        id: 'panels-done',
-        title: 'Left + right side panels and covers \u2014 already removed',
-        pre: true,
-        note: 'Article: left panel/cover removal + \u201cAdditional information and removing the belts\u201d',
-        lines: [
-          ['green', 0, 'Five nylon rivets per top see-through cover, eleven per steel side panel \u2013 <b>you already did this on both sides</b>.'],
-          ['green', 1, 'Just confirm all four parts are stored somewhere clean and flat, and that you kept the <b>22 + 10 nylon rivets</b>. You need them again in Phases 10, 14 and 15.'],
-          [null, 0, 'note', 'Bpendragon (article comment): with the right side panel off, this is the ideal moment to drill it yourself if you want the expanded-bucket mod.'],
-        ],
-        images: [
-          [IMG + '7976ecd1810830a0d0564063ce307a28_painted.jpeg', IMG + '7976ecd1810830a0d0564063ce307a28_painted.jpeg'],
-          [IMG + 'f7aec23c4e1c66651db9835f957ba2db_painted-800x600.jpeg', IMG + 'f7aec23c4e1c66651db9835f957ba2db_painted.jpeg'],
-          [IMG + '5bd0270a9ca89f23a1b2ac488204e54d_painted-800x600.jpeg', IMG + '5bd0270a9ca89f23a1b2ac488204e54d_painted.jpeg'],
-        ],
       }),
     ],
   },
   {
-    title: 'Phase 1 \u2013 INDX heatbed spacers (left & right)',
-    intro: 'Straight continuation of the INDX guide from where you stopped (3.6 \u2192 3.10).',
+    title: 'Phase 1 \u2013 Printer preparation & disassembly',
+    intro: `INDX chapter 2, complete. Firmware, filament out, power off, then strip the top, the door, the electronics
+      connections and the whole Nextruder / print head. Nothing from the Gen 2 guide is needed yet.`,
+    items: range('indx2', 1096990, 1098670),
+  },
+  {
+    title: 'Phase 2 \u2013 Z-axis: remove the heatbed',
+    intro: '{{1098695}} \u2192 {{1098905}}. The heatbed comes out completely, which makes the Gen 2 expansion-joint work later much easier.',
+    items: range('indx3', 1098695, 1098905),
+  },
+  {
+    title: 'Phase 3 \u2013 INDX heatbed spacers (left & right)',
+    intro: '{{1098993}} \u2192 {{1099288}}.',
     items: range('indx3', 1098993, 1099288),
   },
   {
-    title: 'Phase 2 \u2013 Rear bed spacer & INDX offset sensor',
-    intro: 'INDX 3.12 \u2192 3.20. Note the deliberately <b>half-tightened</b> offset sensor screw \u2013 that is the Gen 2 difference.',
+    title: 'Phase 4 \u2013 Motor cables and the left side panel',
+    intro: `Article section \u201cSecuring the bed spacer \u2013 right, additional information\u201d. The Gen 2 work needs both motors free
+      and the left side of the frame open.`,
+    items: [
+      c({
+        id: 'xy-cables',
+        title: 'Disconnect the X and Y motor cables',
+        note: 'Article: \u201cSecuring the bed spacer \u2013 right, additional information\u201d',
+        lines: [
+          ['violet', 0, 'Press the safety latch and <b>disconnect the X and Y motor cables</b> from the xBuddy board at the back of the printer.'],
+          ['green', 1, 'Gently pull the cables to create some slack, but <b>keep the connectors inside the electronics compartment</b>.'],
+          [null, 0, 'reminder', 'They get plugged back in near the very end, in Phase 16.'],
+        ],
+        images: [[IMG + 'b4f150ea3fa5291bc09807d8eb8bd6a5-800x600.jpeg', IMG + 'b4f150ea3fa5291bc09807d8eb8bd6a5.jpeg']],
+      }),
+      c({
+        id: 'left-cover',
+        title: 'Remove the left top see-through cover',
+        note: 'Article \u00b7 not in either guide at this point',
+        lines: [
+          ['violet', 0, 'Remove all <b>five nylon rivets</b> securing the left top see-through side cover.'],
+          ['green', 1, 'Support the cover by hand as you pull the last rivets so it cannot fall.'],
+          ['green', 0, 'Set the cover aside somewhere clean and flat. <b>Keep the rivets</b> \u2013 it goes back on in Phase 12.'],
+        ],
+        images: [
+          [IMG + 'd4f9df5f095c559fca04750d9a89bb3d_painted.jpeg', IMG + 'd4f9df5f095c559fca04750d9a89bb3d_painted.jpeg'],
+          [IMG + '7976ecd1810830a0d0564063ce307a28_painted.jpeg', IMG + '7976ecd1810830a0d0564063ce307a28_painted.jpeg'],
+        ],
+      }),
+      c({
+        id: 'left-panel',
+        title: 'Remove the left steel side panel',
+        note: 'Article \u00b7 not in either guide at this point',
+        lines: [
+          ['violet', 0, 'Remove the <b>eleven nylon rivets</b> securing the left steel side panel.'],
+          ['green', 1, 'Support the panel by hand when the last rivets come out.'],
+          ['green', 0, 'Take the panel off the printer. It stays off until Phase 16.'],
+          [null, 0, 'note', 'From here on, the INDX guide photos still show this panel in place. Ignore that \u2013 proceed as if it were removed.'],
+        ],
+        images: [[IMG + 'f7aec23c4e1c66651db9835f957ba2db_painted-800x600.jpeg', IMG + 'f7aec23c4e1c66651db9835f957ba2db_painted.jpeg']],
+      }),
+    ],
+  },
+  {
+    title: 'Phase 5 \u2013 Rear bed spacer & INDX offset sensor',
+    intro: '{{1098949}} \u2192 {{1099623}}. Note the deliberately <b>half-tightened</b> screw at {{1099523}} \u2013 that is the Gen 2 difference, and it is finished in Phase 16.',
     items: range('indx3', 1098949, 1099623),
   },
   {
-    title: 'Phase 3 \u2013 GEN 2: new heatbed expansion joints',
-    intro: `Switch to the <b>Gen 2 guide</b>, chapter 4. The heatbed is out of the printer, which actually makes this easier than
-      in the official Gen 2 guide (where it is only leaned against the back). This is the phase people damage parts in \u2013 read the tips.`,
+    title: 'Phase 6 \u2013 GEN 2: new heatbed expansion joints',
+    intro: `Switch to the <b>Gen 2 guide</b>, {{1110931}} \u2192 {{1110975}}. The Gen 2 guide shows the heatbed leaning against the back of
+      the printer; yours is out on the bench, which is better. <b>This is the phase people damage parts in</b> \u2013 read the notes first.`,
     items: range('gen2bed', 1110931, 1110975),
   },
   {
-    title: 'Phase 4 \u2013 Back to INDX: cable cover, heatbed refit, bed-stop',
-    intro: 'INDX 3.21 \u2192 3.40. The heatbed goes back in but the bed screws stay <b>loose</b> \u2013 they are torqued in Phase 13.',
+    title: 'Phase 7 \u2013 INDX: cable cover, heatbed refit, bed-stop',
+    intro: 'Back to the INDX guide, {{1099677}} \u2192 {{1100478}}. The heatbed goes back in but its screws stay <b>loose</b> \u2013 they are torqued in Phase 15.',
     items: range('indx3', 1099677, 1100478),
-    done: [1099677],
   },
   {
-    title: 'Phase 5 \u2013 Loosen and release the belts',
-    intro: 'INDX 4.1 \u2192 4.3. This is the last INDX step before the big Gen 2 belt/pulley block.',
+    title: 'Phase 8 \u2013 Loosen and release the belts',
+    intro: '{{1100576}} \u2192 {{1100696}}. Last INDX steps before the Gen 2 belt block. This replaces Gen 2 steps 3.2 and 3.3.',
     items: range('indx4', 1100576, 1100696),
   },
   {
-    title: 'Phase 6 \u2013 Gen 2 prep: differences and belt-screw lubrication',
-    intro: `Article section \u201cAdditional information and removing the belts\u201d. Read all of this <b>before</b> touching the Gen 2 belt chapter.`,
+    title: 'Phase 9 \u2013 Right side panel, guide differences, tensioner lubrication',
+    intro: `Article section \u201cAdditional information and removing the belts\u201d. Read all of it <b>before</b> touching the Gen 2 belt chapter.`,
     items: [
+      c({
+        id: 'right-cover',
+        title: 'Remove the right top see-through cover',
+        note: 'Article: \u201cAdditional information and removing the belts\u201d',
+        lines: [
+          ['violet', 0, 'Remove all <b>five nylon rivets</b> securing the right top see-through side cover.'],
+          ['green', 1, 'Support the cover by hand when the last rivet comes out.'],
+          ['green', 0, 'Set it aside next to the left one. It goes back on in Phase 12.'],
+        ],
+        images: [
+          [IMG + '41149a0d7a481194fb53dc905d11145f.jpg', IMG + '41149a0d7a481194fb53dc905d11145f.jpg'],
+          [IMG + '9697fb05c5af8c05366754496445f788.jpg', IMG + '9697fb05c5af8c05366754496445f788.jpg'],
+        ],
+      }),
+      c({
+        id: 'right-panel',
+        title: 'Remove the right steel side panel',
+        note: 'Article \u00b7 replaces {{1104211}}',
+        lines: [
+          ['violet', 0, 'Remove the <b>eleven nylon rivets</b> securing the right steel side panel and take it off.'],
+          ['green', 0, 'It stays off until {{1136729}} in Phase 17. The side handle and side filament sensor mount onto it in Phase 14.'],
+          [null, 0, 'reminder', 'This makes {{1104211}} redundant \u2013 that step is marked as skipped in Phase 14.'],
+          [null, 0, 'note', 'Bpendragon (article comment): with the panel off and flat on the bench, this is the ideal moment to drill it yourself if you want the expanded-bucket mod.'],
+        ],
+        images: [[IMG + '5bd0270a9ca89f23a1b2ac488204e54d_painted-800x600.jpeg', IMG + '5bd0270a9ca89f23a1b2ac488204e54d_painted.jpeg']],
+      }),
       c({
         id: 'differences',
         title: 'Differences between the two guides (do not be alarmed)',
@@ -137,12 +221,12 @@ const PLAN = [
       c({
         id: 'lube',
         title: 'Lubricate both belt-tensioner screws',
-        note: 'Article: \u201cBelt-tensioner screws\u201d \u00b7 replaces INDX step 4.13',
+        note: 'Article: \u201cBelt-tensioner screws\u201d \u00b7 replaces {{1116271}}',
         lines: [
           ['violet', 0, 'Use the <b>Prusa lubricant</b> from the <i>Fasteners 2/2</i> bag of the INDX conversion kit.'],
           ['green', 1, 'Apply a small amount to the tip of <b>both</b> the left and right <b>M3x30 belt-tensioning screws</b> you removed earlier.'],
           ['green', 1, 'Spread it evenly over the whole thread and put the screws back into the belt tensioners.'],
-          [null, 0, 'reminder', 'Because you did it here, <b>skip INDX step 4.13 \u201cLubricating the belt tensioner screw\u201d</b> when it appears later (it is greyed out in Phase 8 of this guide).'],
+          [null, 0, 'reminder', 'Because you did it here, <b>skip {{1116271}}</b> when it appears later \u2013 it is marked as skipped in Phase 11.'],
           [null, 0, 'note', 'k1mu (step comment): if your printer is an original CORE One that was upgraded, assume the tensioner screws were <i>never</i> lubricated \u2013 do not skip this.'],
         ],
         images: [
@@ -153,20 +237,20 @@ const PLAN = [
     ],
   },
   {
-    title: 'Phase 7 \u2013 GEN 2: belts, pulleys and both motors',
-    intro: `Gen 2 guide chapter 3, steps 4 \u2192 38. Both motors come off, both pulleys are replaced, both belts are replaced.
-      Ends right after \u201cGuiding the upper belt (gantry \u2013 right)\u201d.`,
+    title: 'Phase 10 \u2013 GEN 2: belts, pulleys and both motors',
+    intro: `Gen 2 guide, {{1149188}} \u2192 {{1113491}}. Both motors come off, both pulleys are replaced, both belts are replaced.
+      The longest and fiddliest phase \u2013 the pulley orientation notes are the important ones.`,
     items: range('gen2belts', 1149188, 1113491),
     skipped: [1113247],
   },
   {
-    title: 'Phase 8 \u2013 INDX: gantry alignment, toolhead, head cable, FS assembly',
-    intro: 'Back to the INDX guide, 4.5 \u2192 4.53. Long phase. Ends with \u201cCovering the FS \u2013 right\u201d.',
+    title: 'Phase 11 \u2013 INDX: gantry alignment, toolhead, head cable, FS assembly',
+    intro: 'Back to the INDX guide, {{1100758}} \u2192 {{1103025}}.',
     items: range('indx4', 1100758, 1103025),
     skipped: [1116271],
   },
   {
-    title: 'Phase 9 \u2013 Refit both top see-through covers',
+    title: 'Phase 12 \u2013 Refit both top see-through covers',
     intro: 'Article section \u201cMounting the side panels, PTFE and right cover\u201d.',
     items: [
       c({
@@ -175,40 +259,40 @@ const PLAN = [
         note: 'Article: \u201cMounting the side panels, PTFE and right cover\u201d',
         lines: [
           ['violet', 0, 'Refit the <b>left</b> top see-through cover with <b>four</b> nylon rivets.'],
-          ['orange', 1, '<b>Leave the top middle hole empty</b> \u2013 the left side filament sensor mounts there in the next phase.'],
+          ['orange', 1, '<b>Leave the top middle hole empty</b> \u2013 the left side filament sensor mounts there in the next phase ({{1103113}}).'],
           ['violet', 0, 'Refit the <b>right</b> top see-through cover.'],
           ['orange', 1, 'If you have the <b>8-tool</b> INDX, leave the top-middle rivet out on this side too.'],
-          [null, 0, 'note', 'The steel side panels stay off for now. The right one goes back in Phase 15, the left one in Phase 14.'],
+          [null, 0, 'note', 'The steel side panels stay off for now \u2013 left goes back in Phase 16, right in Phase 17.'],
         ],
         images: [[IMG + '7bcfc5316b09525297fa41e8541e3a57_painted-800x600.jpeg', IMG + '7bcfc5316b09525297fa41e8541e3a57_painted.jpeg']],
       }),
     ],
   },
   {
-    title: 'Phase 10 \u2013 INDX: side filament sensors & PTFE tubes',
-    intro: 'INDX 4.54 \u2192 4.72. Ends the INDX toolhead chapter.',
+    title: 'Phase 13 \u2013 INDX: side filament sensors & PTFE tubes',
+    intro: '{{1103061}} \u2192 {{1104025}}. Ends the INDX toolhead chapter.',
     items: range('indx4', 1103061, 1104025),
   },
   {
-    title: 'Phase 11 \u2013 INDX: nozzle wiper, side handle, dock fan cable',
-    intro: 'INDX 5.1 \u2192 5.17, ending at \u201cSecuring the zip ties II.\u201d',
+    title: 'Phase 14 \u2013 INDX: nozzle wiper, side handle, dock fan cable',
+    intro: '{{1104051}} \u2192 {{1104485}}.',
     items: range('indx5', 1104051, 1104485),
-    done: [1104211],
+    skipped: [1104211],
   },
   {
-    title: 'Phase 12 \u2013 GEN 2: align the expansion joints and fix the heatbed',
-    intro: `Back to the Gen 2 guide, chapter 4 steps 11 \u2192 20. This is where the loose heatbed screws from Phase 4 finally get
-      torqued. <b>Read the alignment tips first</b> \u2013 the official sequence has a known problem with the front-right joint.`,
+    title: 'Phase 15 \u2013 GEN 2: align the expansion joints and fix the heatbed',
+    intro: `Back to the Gen 2 guide, {{1110993}} \u2192 {{1111043}}. The loose heatbed screws from Phase 7 finally get torqued.
+      <b>Read the alignment notes first</b> \u2013 the official sequence has a known problem with the front-right joint.`,
     items: range('gen2bed', 1110993, 1111043),
   },
   {
-    title: 'Phase 13 \u2013 Finish the offset sensor, motors and left panel',
+    title: 'Phase 16 \u2013 Finish the offset sensor, motors and left panel',
     intro: 'Article section \u201cMounting the left cover, covering the electronics\u201d. This closes out the Gen 2 guide entirely.',
     items: [
       c({
         id: 'offset-screw',
         title: 'Properly secure the offset sensor assembly',
-        note: 'Article \u00b7 completes the deferred INDX step 3.18',
+        note: 'Article \u00b7 completes the deferred {{1099523}}',
         lines: [
           ['violet', 0, 'From underneath the Z-carriage, <b>fully tighten the M3x10 screw</b> holding the INDX offset sensor assembly.'],
           [null, 0, 'caution', 'The screw forms its own thread in the plastic. <b>Do not overtighten.</b>'],
@@ -219,7 +303,7 @@ const PLAN = [
       c({
         id: 'motor-cables-back',
         title: 'Reconnect the X and Y motor cables',
-        note: 'Article \u00b7 mirrors GEN 2 step 4.35',
+        note: 'Article \u00b7 mirrors {{1144140}}',
         lines: [
           ['violet', 0, 'Connect the <b>left</b> motor cable (X motor) to the <b>left</b> connector on the xBuddy board \u2013 labelled <b>X</b>.'],
           ['violet', 0, 'Connect the <b>right</b> motor cable (Y motor) to the <b>right</b> connector \u2013 labelled <b>Y</b>.'],
@@ -233,7 +317,7 @@ const PLAN = [
         note: 'Article \u00b7 end of the CORE One GEN 2 guide',
         lines: [
           ['violet', 0, 'Put the <b>left steel side panel</b> back on the printer.'],
-          ['green', 1, 'Secure it with <b>3 nylon rivets only</b>, in the highlighted positions. The rest go in during Phase 15.'],
+          ['green', 1, 'Secure it with <b>3 nylon rivets only</b>, in the highlighted positions. The rest go in during Phase 17.'],
           [null, 0, 'reminder', 'With this done you are <b>finished with the CORE One Gen 2 guide</b>. Everything from here is pure INDX.'],
         ],
         images: [[IMG + 'ade5132c22b81c5d3766c2c7f7555bb1_painted-800x600.jpeg', IMG + 'ade5132c22b81c5d3766c2c7f7555bb1_painted.jpeg']],
@@ -241,33 +325,12 @@ const PLAN = [
     ],
   },
   {
-    title: 'Phase 14 \u2013 INDX: electronics covers, puck holders, tool dock, top cover',
-    intro: 'INDX 5.18 \u2192 5.104. The rest of chapter 5, straight through, plus one community step before the tools go on.',
-    items: [
-      ...range('indx5', 1105054, 1108879),
-      c({
-        id: 'toolhead-bearings',
-        badge: 'Community PSA',
-        title: 'Lubricate the three toolhead ball bearings',
-        note: 'Not in the official guide \u00b7 r/prusa3d PSA',
-        lines: [
-          ['violet', 0, `Before the first tool is mated to the toolhead, lubricate the <b>three ball bearings in the INDX toolhead</b> \u2013 the coupling the tools latch onto. (<a href="${PSA_BEARINGS}" target="_blank" rel="noopener">r/prusa3d PSA \u2197</a>)`],
-          ['green', 1, 'Use the <b>Prusa lubricant</b> from the <i>Fasteners 2/2</i> bag \u2013 the same one you used on the belt-tensioner screws in Phase 6.'],
-          ['green', 1, 'Apply it with a <b>small brush</b>: a thin film on each bearing, not a blob.'],
-          ['green', 1, 'Dock a tool, undock it, and check the mating surfaces before doing the next one. Top up only where a bearing still looks dry.'],
-          [null, 0, 'caution', 'Stop as soon as lubricant starts to <b>build up</b> on the mating surface. Excess migrates onto the tool faces and into the dock, where you do not want it.'],
-          [null, 0, 'note', 'The tool docking in the next steps is your first pass. The wizard\u2019s <b>Tool offsets calibration</b> in Phase 15 swaps every tool again \u2013 a good moment to re-check.'],
-        ],
-        tips: [
-          ['jnangano (r/prusa3d)', 'Use the ordinary Prusa lube and put a liberal amount on the three ball bearings in the toolhead.'],
-          ['Ortekkk (r/prusa3d)', 'Do <b>not</b> use as much lube as shown in Grant\u2019s video \u2013 that is roughly 10\u00d7 more than needed and it ends up in places you do not want it. Brush on a small amount, swap a tool in and out, and repeat until every tool has been through. Look at the mounting surface between each tool and stop applying if it starts to build up.'],
-        ],
-      }),
-      ...range('indx5', 1108920, 1109439),
-    ],
+    title: 'Phase 17 \u2013 INDX: electronics covers, puck holders, tool dock, top cover',
+    intro: '{{1105054}} \u2192 {{1109439}}. The rest of chapter 5, straight through.',
+    items: range('indx5', 1105054, 1109439),
   },
   {
-    title: 'Phase 15 \u2013 INDX: preflight check, firmware and calibration wizard',
+    title: 'Phase 18 \u2013 Preflight check, firmware and calibration wizard',
     intro: 'INDX chapter 6, complete. Read the firmware / belt-type note before you start the wizard.',
     items: range('indx6', 1109473, 1110607),
   },
@@ -291,14 +354,14 @@ const REUSE_RE = /removed earlier|you removed|previously removed|remove[d]? in t
 
 function renderLine(color, level, text, icon, flags) {
   if (icon) {
-    return `<div class="cal cal-${esc(icon)}"><span class="cal-tag">${ICON_LABEL[icon] || 'Note'}</span><div>${text}</div></div>`;
+    return `<div class="cal cal-${esc(icon)}"><span class="cal-tag">${ICON_LABEL[icon] || 'Note'}</span><div>${refs(text)}</div></div>`;
   }
   let chip = '';
   if (REUSE_RE.test(text)) { chip = ' <span class="chip">from your printer</span>'; if (flags) flags.reuse = true; }
   const dot = color
     ? `<span class="hex" style="--c:${COLOR_HEX[color] || '#94a3b8'}"></span>`
     : `<span class="hex hex-plain"></span>`;
-  return `<li class="${level ? 'lvl1' : ''}">${dot}<span>${text}${chip}</span></li>`;
+  return `<li class="${level ? 'lvl1' : ''}">${dot}<span>${refs(text)}${chip}</span></li>`;
 }
 
 function renderLines(lines, flags) {
@@ -333,13 +396,13 @@ function galleryOf(step) {
 function renderImages(pairs) {
   if (!pairs.length) return '';
   return `<div class="gal${pairs.length === 1 ? ' one' : ''}">` + pairs.map(([s, f]) =>
-    `<a href="${esc(f || s)}" class="zoom"><img loading="lazy" src="${esc(s)}" alt=""></a>`).join('') + '</div>';
+    `<a href="${esc(f)}" target="_blank" rel="noopener"><img loading="lazy" src="${esc(s)}" alt=""></a>`).join('') + '</div>';
 }
 
 function renderTips(tips) {
   if (!tips || !tips.length) return '';
   return `<div class="tips"><div class="tips-h">Community notes</div>` +
-    tips.map(([who, what]) => `<div class="tip"><span class="who">${esc(who)}</span>${what}</div>`).join('') +
+    tips.map(([who, what]) => `<div class="tip"><span class="who">${esc(who)}</span>${refs(what)}</div>`).join('') +
     `</div>`;
 }
 
@@ -349,7 +412,6 @@ const sectionsHtml = [];
 const tocHtml = [];
 
 for (const [si, sec] of PLAN.entries()) {
-  const doneSet = new Set(sec.done || []);
   const skipSet = new Set(sec.skipped || []);
   const secId = 'sec' + si;
   const cards = [];
@@ -368,43 +430,37 @@ for (const [si, sec] of PLAN.entries()) {
 
     if (item.custom) {
       title = item.title;
-      meta = `<span class="badge badge-art">${esc(item.badge || 'Combined article')}</span>` +
-        (item.note ? `<span class="src">${esc(item.note)}</span>` : '');
+      meta = `<span class="badge badge-art">Combined article</span>` +
+        (item.note ? `<span class="src">${refs(item.note)}</span>` : '');
       body = renderLines(item.lines, flags);
       images = renderImages(item.images || []);
       tips = renderTips(item.tips);
-      if (item.pre) cls += ' predone';
     } else {
       const st = STEPS[item.key].byId.get(item.id);
       if (!st) throw new Error('missing step ' + item.id);
       const src = SOURCES[item.key];
-      const num = st.order + 1;
-      const url = `https://help.prusa3d.com/guide/${src.slug}#${st.id}`;
+      const r = REF.get(st.id);
       title = st.title;
       const isGen2 = item.key.startsWith('gen2');
-      meta = `<a class="badge ${isGen2 ? 'badge-gen2' : 'badge-indx'}" href="${url}" target="_blank" rel="noopener" title="${esc(src.guide)}">${src.label}.${num} \u2197</a>`;
-      body = renderLines([...(st.lines || []), ...(EXTRA[st.id] || [])], flags);
+      meta = `<a class="badge ${isGen2 ? 'badge-gen2' : 'badge-indx'}" href="${r.url}" target="_blank" rel="noopener" title="${esc(src.guide)}">${r.label} \u2197</a>`;
+      body = renderLines(st.lines || [], flags);
       images = renderImages(galleryOf(st));
       tips = renderTips(TIPS[st.id]);
       if (KEEP[st.id]) {
-        keep = `<div class="cal cal-keep"><span class="cal-tag">Keep</span><div>${KEEP[st.id]}</div></div>`;
+        keep = `<div class="cal cal-keep"><span class="cal-tag">Keep</span><div>${refs(KEEP[st.id])}</div></div>`;
       }
-      if (doneSet.has(st.id)) cls += ' predone';
       if (skipSet.has(st.id)) cls += ' skipstep';
     }
 
     if (flags.reuse) meta += `<span class="badge badge-reuse">reuses old parts</span>`;
     if (keep) meta += `<span class="badge badge-keep">keep parts</span>`;
     if (prepReason) meta += `<span class="badge badge-prep" title="${esc(prepReason)}">no kit needed</span>`;
-    if (!item.custom && EXTRA[item.id]) meta += `<span class="badge badge-art">article expanded</span>`;
 
     const skipBanner = cls.includes('skipstep')
       ? `<div class="cal cal-skip"><span class="cal-tag">Skip</span><div>This step is <b>not part of your build</b> \u2013 it is superseded elsewhere in this guide. Tick it to move on.</div></div>` : '';
-    const preBanner = cls.includes('predone')
-      ? `<div class="cal cal-done"><span class="cal-tag">Already done</span><div>You told me this is finished. Pre-ticked \u2013 untick it if you want to redo or verify it.</div></div>` : '';
 
     cards.push(`
-<article class="step${cls}" id="${uid}" data-step="${uid}"${cls.includes('predone') ? ' data-pre="1"' : ''}>
+<article class="step${cls}" id="${uid}" data-step="${uid}">
   <label class="tickzone">
     <input type="checkbox" class="tick" data-step="${uid}">
     <span class="box"></span>
@@ -415,7 +471,7 @@ for (const [si, sec] of PLAN.entries()) {
       <h3>${title}</h3>
       <div class="meta">${meta}</div>
     </header>
-    ${preBanner}${skipBanner}${keep}
+    ${skipBanner}${keep}
     ${body}
     ${images}
     ${tips}
@@ -430,7 +486,7 @@ for (const [si, sec] of PLAN.entries()) {
     <h2>${esc(sec.title)}</h2>
     <div class="phase-prog"><div class="bar"><i data-secbar="${secId}"></i></div><span data-seccount="${secId}"></span></div>
   </div>
-  ${sec.intro ? `<p class="intro">${sec.intro}</p>` : ''}
+  ${sec.intro ? `<p class="intro">${refs(sec.intro)}</p>` : ''}
   ${cards.join('\n')}
 </section>`);
 }
@@ -443,16 +499,16 @@ const salvageHtml = SALVAGE.map((g) => `  <div class="sgroup${g.warn ? ' warn' :
     <table class="stab">
       <thead><tr><th>Part</th><th>Qty</th><th>Comes off at</th><th>Needed again at</th><th>Notes</th></tr></thead>
       <tbody>${g.rows.map(([p, q, from, to, note]) => `<tr>
-        <td class="pn">${p}</td><td class="qty">${q}</td><td class="mut">${from}</td>
-        <td class="${/scrap|not needed|superseded/i.test(to) ? 'mut' : 'need'}">${to}</td>
-        <td class="mut">${note || ''}</td></tr>`).join('')}</tbody>
+        <td class="pn">${refs(p)}</td><td class="qty">${q}</td><td class="mut">${refs(from)}</td>
+        <td class="${/scrap|not needed|superseded/i.test(to) ? 'mut' : 'need'}">${refs(to)}</td>
+        <td class="mut">${refs(note || '')}</td></tr>`).join('')}</tbody>
     </table>
   </div>`).join('');
 const prepTasksHtml = PREP_TASKS.map(([t, d], i) => `
   <label class="ptask">
     <input type="checkbox" class="tickp" data-step="prep-${i}">
     <span class="box"></span>
-    <span class="ptxt"><b>${esc(t)}</b><br><span class="mut">${d}</span></span>
+    <span class="ptxt"><b>${esc(t)}</b><br><span class="mut">${refs(d)}</span></span>
   </label>`).join('');
 
 const prepStepCount = totalPrep;
@@ -551,6 +607,9 @@ p.intro{margin:0 0 14px;color:var(--mut);font-size:14px}
 .chip{display:inline-block;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;
   background:rgba(14,116,144,.14);color:#0e7490;border-radius:5px;padding:1px 6px;margin-left:5px;
   vertical-align:1px;white-space:nowrap}
+a.sref{font-weight:700;font-size:.92em;text-decoration:none;border-bottom:1px dotted currentColor;
+  white-space:nowrap;color:var(--orange-d)}
+a.sref:hover{background:rgba(250,104,49,.12)}
 
 details.salvage{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 18px;margin:0 0 26px}
 details.salvage > summary{cursor:pointer;font-size:16px;letter-spacing:-.01em}
@@ -602,22 +661,7 @@ ul.steplines li.lvl1{padding-left:22px}
 .gal.one{grid-template-columns:minmax(0,440px)}
 .gal img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:8px;border:1px solid var(--line);
   background:var(--line);display:block;transition:transform .15s}
-.gal a{cursor:zoom-in}
 .gal a:hover img{transform:scale(1.02);border-color:var(--orange)}
-
-#lb{position:fixed;inset:0;z-index:200;background:rgba(15,23,42,.92);display:none;
-  align-items:center;justify-content:center;padding:24px;cursor:zoom-out}
-#lb.on{display:flex}
-#lb img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;
-  box-shadow:0 24px 60px rgba(0,0,0,.5);background:#0f172a}
-#lb .lb-close{position:absolute;top:14px;right:18px;border:0;border-radius:8px;cursor:pointer;
-  background:rgba(255,255,255,.14);color:#fff;font-size:22px;line-height:1;padding:8px 13px}
-#lb .lb-nav{position:absolute;top:50%;transform:translateY(-50%);border:0;border-radius:8px;cursor:pointer;
-  background:rgba(255,255,255,.14);color:#fff;font-size:26px;line-height:1;padding:12px 15px}
-#lb .lb-prev{left:14px}
-#lb .lb-next{right:14px}
-#lb .lb-nav[hidden]{display:none}
-#lb .lb-hint{position:absolute;bottom:14px;left:0;right:0;text-align:center;color:rgba(255,255,255,.6);font-size:12px}
 
 .tips{margin-top:12px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .tips-h{background:rgba(250,104,49,.10);color:var(--orange-d);font-size:11px;font-weight:800;
@@ -670,11 +714,11 @@ footer{max-width:1500px;margin:0 auto;padding:0 18px 60px;color:var(--mut);font-
 
   <main>
     <div class="lead">
-      <h1>Your personal upgrade path</h1>
-      <p>A single, linear, de-duplicated merge of the <b>Prusa CORE One INDX conversion</b> guide and the
-      <b>CORE One+ (Gen 2)</b> upgrade guide, following the switching order from
-      <a href="${ART}" target="_blank" rel="noopener">Prusa\u2019s combined article</a> \u2014 but starting from the exact point you are at
-      and with the steps you already completed pre-ticked.</p>
+      <h1>CORE One \u2192 CORE One+ (Gen&nbsp;2) with INDX</h1>
+      <p>The complete conversion, start to finish, in one linear list. A de-duplicated merge of the
+      <b>Prusa CORE One INDX conversion</b> guide and the <b>CORE One+ (Gen 2)</b> upgrade guide, sequenced per
+      <a href="${ART}" target="_blank" rel="noopener">Prusa\u2019s combined article</a> \u2014 no jumping between tabs,
+      no duplicated steps, superseded steps marked as skippable.</p>
       <p><b>${n} steps</b> across ${PLAN.length} phases. Every tick is saved in your browser (localStorage), so you can close
       the page and come back. Each step links back to the original Prusa step \u2014 photos are loaded from help.prusa3d.com,
       so keep an internet connection.</p>
@@ -703,7 +747,7 @@ footer{max-width:1500px;margin:0 auto;padding:0 18px 60px;color:var(--mut);font-
         <span class="cal-tag">Before you start</span>
         <div>Once the belts are off and both motors are loose, the <b>gantry is floppy and no longer square</b>. That is fine — it gets
         re-squared with the Gantry-aligner-tool in Phase 8 — but do not shove the X/Y carriage around, and do not stack anything on the frame.
-        <br>${PREP_BLOCKED}</div>
+        <br>${refs(PREP_BLOCKED)}</div>
       </div>
       <div class="sgroup"><h4>Off-guide prep tasks</h4>${prepTasksHtml}</div>
     </details>
@@ -716,7 +760,7 @@ footer{max-width:1500px;margin:0 auto;padding:0 18px 60px;color:var(--mut);font-
         <span class="badge badge-keep">keep parts</span> badge with a note saying exactly where it is needed again.
         Quantities are what your build path actually consumes \u2014 not the full kit BOM.
       </p>
-      ${SALVAGE_INTRO}
+      ${refs(SALVAGE_INTRO)}
       ${salvageHtml}
     </details>
     ${sectionsHtml.join('\n')}
@@ -728,30 +772,15 @@ footer{max-width:1500px;margin:0 auto;padding:0 18px 60px;color:var(--mut);font-
   Unofficial \u2013 always cross-check against the linked original step if something looks wrong.
 </footer>
 
-<div id="lb" role="dialog" aria-modal="true" aria-label="Enlarged image">
-  <img alt="">
-  <button class="lb-nav lb-prev" type="button" aria-label="Previous image">\u2039</button>
-  <button class="lb-nav lb-next" type="button" aria-label="Next image">\u203a</button>
-  <button class="lb-close" type="button" aria-label="Close">\u00d7</button>
-  <div class="lb-hint">Click anywhere or press Esc to close \u00b7 arrow keys to browse this step</div>
-</div>
-
 <script>
 (function(){
-  var KEY = 'coreone-gen2-indx-progress-v2';
+  var KEY = 'coreone-gen2-indx-progress-v3';
   var state = {};
   try { state = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch(e) { state = {}; }
-  var first = !localStorage.getItem(KEY);
 
   var boxes = Array.prototype.slice.call(document.querySelectorAll('input.tick'));
   var prepBoxes = Array.prototype.slice.call(document.querySelectorAll('input.tickp'));
   var total = boxes.length;
-
-  if (first) {
-    document.querySelectorAll('.step[data-pre="1"]').forEach(function(el){
-      state[el.dataset.step] = true;
-    });
-  }
 
   function save(){ try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){} }
 
@@ -834,52 +863,6 @@ footer{max-width:1500px;margin:0 auto;padding:0 18px 60px;color:var(--mut);font-
     boxes.forEach(function(cb){ cb.checked = false; paintStep(cb); });
     prepBoxes.forEach(function(cb){ cb.checked = false; });
     refresh(); refreshPrep();
-  });
-
-  // Lightbox -----------------------------------------------------------------
-  var lb = document.getElementById('lb');
-  var lbImg = lb.querySelector('img');
-  var lbPrev = lb.querySelector('.lb-prev');
-  var lbNext = lb.querySelector('.lb-next');
-  var group = [];
-  var index = 0;
-
-  function show(i){
-    index = (i + group.length) % group.length;
-    lbImg.src = group[index].href;
-    lbPrev.hidden = lbNext.hidden = group.length < 2;
-  }
-  function openLb(link){
-    group = Array.prototype.slice.call(link.closest('.gal').querySelectorAll('a.zoom'));
-    show(group.indexOf(link));
-    lb.classList.add('on');
-    document.body.style.overflow = 'hidden';
-  }
-  function closeLb(){
-    lb.classList.remove('on');
-    lbImg.removeAttribute('src');
-    document.body.style.overflow = '';
-  }
-
-  document.addEventListener('click', function(e){
-    var link = e.target.closest && e.target.closest('a.zoom');
-    if (!link) return;
-    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return; // let modified clicks open normally
-    e.preventDefault();
-    openLb(link);
-  });
-
-  lb.addEventListener('click', function(e){
-    if (e.target === lbPrev) { show(index - 1); return; }
-    if (e.target === lbNext) { show(index + 1); return; }
-    closeLb();
-  });
-
-  document.addEventListener('keydown', function(e){
-    if (!lb.classList.contains('on')) return;
-    if (e.key === 'Escape') closeLb();
-    else if (e.key === 'ArrowLeft') show(index - 1);
-    else if (e.key === 'ArrowRight') show(index + 1);
   });
 })();
 </script>
