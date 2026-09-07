@@ -159,10 +159,10 @@ export const TIPS = {
 };
 
 export const ARTICLE_COMMENTS = [
-  ['Tkadla', 'Several steps \u2013 bed spacers, the new sensor \u2013 would be far easier if the guide had you remove <b>both side panels and covers at the start</b>. The printer is lighter, easier to manipulate and you can actually see inside. <b>You already did this, which is why this guide is reordered around it.</b>'],
+  ['Tkadla', 'Several steps \u2013 bed spacers, the new sensor \u2013 would be far easier if the guide had you remove <b>both side panels and covers at the start</b>. The printer is lighter, easier to manipulate and you can actually see inside. <b>See the optional step at the end of Phase 0.</b>'],
   ['PetrichorPete', 'The sequence for tightening the new expansion joints is off, since the front-right joint is blocked by the new offset sensor and the aligner tool can\u2019t be used on it.'],
   ['Bpendragon', 'While the right side panel is off, that is the perfect time to drill it yourself for the expanded bucket if you want that mod.'],
-  ['MBCook', 'The article\u2019s step numbers (\u201c5.16 Securing the zip ties II\u201d) don\u2019t match the live guide. In the current guide it is step 17 of chapter 5, and chapter 5 <i>does</i> continue afterwards \u2013 you come back to it in Phase 15 here.'],
+  ['MBCook', 'The article\u2019s step numbers (\u201c5.16 Securing the zip ties II\u201d) don\u2019t match the live guide. In the current guide it is {{1104485}}, and chapter 5 <i>does</i> continue afterwards \u2013 you come back to it in Phase 17 here.'],
   ['Jim', '\u201cAfter replacing the pulley and belts on the right side, that\u2019s it \u2013 you don\u2019t tell us to bolt the motor back on, nor to do the left motor.\u201d In reality the GEN 2 belts chapter does cover both motors; this guide keeps every one of those steps in order so nothing is missed.'],
 ];
 
