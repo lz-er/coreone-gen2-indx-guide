@@ -23,9 +23,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Requires Settings -> Pages -> Source = "GitHub Actions" (one-time, manual).
       - uses: actions/configure-pages@v5
-        with:
-          enablement: true
 
       # Publish only the generated guide; the scraped raw/ sources stay out of the site.
       - name: Assemble site

@@ -75,10 +75,12 @@ included.
 ## GitHub Pages
 
 `.github/workflows/pages.yml` publishes `index.html` (only) to GitHub Pages on
-every push to `main`. The workflow calls `actions/configure-pages` with
-`enablement: true`, so it turns Pages on by itself the first time it runs. If
-that is blocked by org policy, set **Settings → Pages → Source** to
-*GitHub Actions* once and re-run the workflow.
+every push to `main`.
+
+One-time setup: **Settings → Pages → Source → GitHub Actions**. The default
+`GITHUB_TOKEN` is not allowed to enable Pages by itself, so the first workflow
+run fails at `configure-pages` until this is set. Afterwards, re-run the
+workflow from the Actions tab.
 
 The scraped `raw/` sources are deliberately left out of the published site.
 
