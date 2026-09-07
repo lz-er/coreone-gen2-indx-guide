@@ -492,7 +492,7 @@ for (const [si, sec] of PLAN.entries()) {
 }
 
 const articleCommentsHtml = ARTICLE_COMMENTS
-  .map(([who, what]) => `<div class="tip"><span class="who">${esc(who)}</span>${what}</div>`).join('');
+  .map(([who, what]) => `<div class="tip"><span class="who">${esc(who)}</span>${refs(what)}</div>`).join('');
 
 const salvageHtml = SALVAGE.map((g) => `  <div class="sgroup${g.warn ? ' warn' : ''}">
     <h4>${esc(g.group)}</h4>
